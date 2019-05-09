@@ -9,7 +9,10 @@ const kJwt = require('koa-jwt');
 const DatabaseManager = require("../database/databaseManager");
 const router = require("../app/routes");
 
+const cors = require('@koa/cors');
+
 const app = new Koa();
+app.use(cors());
 
 const SECRET =  process.env.SECRET;
 
@@ -18,6 +21,7 @@ app.use(logger());
 app.use(helmet());
 
 const options = {
+  //get post patch delete ...
 };
 
 DatabaseManager.connectDatabase();
