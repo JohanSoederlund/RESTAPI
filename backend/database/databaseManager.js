@@ -4,8 +4,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const userModel = require('./userModel');
-const Webhook = require('../app/webhook');
+const UserModel = require('./userModel');
 
 const connectionString = 'mongodb://localhost:27017';
    
@@ -49,61 +48,30 @@ function dropCollection(collection1, collection2) {
     });
 }
 
-function saveNewUser(user) {
-    return new Promise((resolve, reject) => {
-        if(JSON.stringify(user.schema) !== JSON.stringify(userModel.schema)) {
-            reject({value: "Wrong schema error", success: false});
-        } 
-
-        bcrypt.genSalt(10, function(err, salt) {
-            if (err) {
-                reject({value: "Internal server error", success: false});
-            };
-
-            bcrypt.hash(user.password, salt, function(err, hash) {
-                if (err) {
-                    reject({value: "Internal server error", success: false});
-                };
-                user.password = hash;
-
-                findUser({user: user.user}, false).then( (existingUser) => {
-                    if (existingUser.value === null) {
-                        user.save( (err, saved)=> {
-                            if(err) reject({value: err, success: false});
-                            resolve({value: saved, success: true});
-                        })
-                    } else {
-                        reject({value: "User allready exist", success: false});
-                    }
-                })
-                .catch((error) => {
-                    reject({value: error, success: false});
-                });
-
-            });
-          });
+async function saveNewUser(user) {
+    try {
+        user = new UserModel(user);
+        let salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+        if (await UserModel.findOne({username: user.username})) {
+            console.log("username taken");
+            return {value: "username taken", success: false};
+        }
+        return await user.save();
         
-    });
+    } catch (error) {
+        console.log(error);
+    }
 }
 
-function findUser(usr, login) {
-    return new Promise((resolve, reject) => {
-        userModel.findOne({user: usr.user})
-        .then((user) => {
-            if (login) {
-                bcrypt.compare(usr.password, user.password, function(err, res) {
-                    if (err) reject({value: "Wrong username or password", success: false});
-                    if (res === false) reject({value: "Wrong username or password", success: false});
-                    else resolve({value: user, success: true});
-                  });
-            } else {
-                resolve({value: user, success: true});
-            }
-        })
-        .catch((error) => {
-            reject({value: "Invalid user credentials", success: false});
-        });
-    });
+async function findUser(user) {
+
+    let databaseUser = await UserModel.findOne({username: user.username});
+    let same = await bcrypt.compare(user.password, databaseUser.password);
+    console.log(same);
+    if (same) return databaseUser;
+    else return {value: "wrong username or password", success: false};
+    
 }
 
 

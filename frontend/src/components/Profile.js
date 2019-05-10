@@ -1,13 +1,14 @@
 
 import React from 'react';
 
-function Profile() {
+function Profile(props) {
 
 
     return (
       <div>
         <h3>My profile</h3>
-        <p></p>
+        <p>username {props.username}</p>
+        <p>token {props.token}</p>
       </div>
     );
   }

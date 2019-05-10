@@ -18,49 +18,51 @@ const router = new Router();
 router.get("/", async function (ctx) {
     ctx.response.status = 200;
     ctx.body = {
-      links: {_self: "/", login: "/login", register: "/register"}
+      links: {_self: "/", login: "/login", profile: "/profile", register: "/register"}
     };
 });
 
 router.post("/register", async function (ctx) {
+    console.log("REGISTER");
     ctx.body = {};
     try {
-        let user = {user: ctx.request.body.user, password: ctx.request.body.password, 
-            token: jwt.sign({ user: ctx.request.body.user }, SECRET, {expiresIn: '1d'}), webhookCallback: ctx.request.body.webhookCallback};
-        user = new LoginModel(user);
-        await DatabaseManager.saveNewUser(user)
-        .then( (result) => {
-            ctx.body.links = {home: "/", login: "/login", _self: "/register"};
-            ctx.body = result.value;
-            if (result.success) {
-                ctx.response.status = 201;
-            } else {
-                ctx.response.status = 400;
-            }
-        });
+        let user = {username: ctx.request.body.username, password: ctx.request.body.password, 
+            token: jwt.sign({ username: ctx.request.body.user }, SECRET, {expiresIn: '1d'})};
+        console.log(user);
+        let result = await DatabaseManager.saveNewUser(user);
+        console.log(result);
+        ctx.body.links = {home: "/", login: "/login", profile: "/profile", _self: "/register"};
+        ctx.response.status = 201;
+        (result.success !== undefined ? (ctx.body = result, ctx.response.status = 400) : ctx.body = {username: result.username, token: result.token });
+        
     } catch (error) {
-        if (error.value === "Internal server error") ctx.response.status = 500;
-        else ctx.response.status = 400;
-        ctx.body = error;
+        ctx.body = "Internal server error";
+        ctx.response.status = 500;
     }
 });
 
 router.post("/login", async function (ctx) {
     ctx.body = {};
+    console.log("LOGIN");
     try {
-        await DatabaseManager.findUser({user: ctx.request.body.user, password: ctx.request.body.password }, true)
-        .then( (result) => {
-            ctx.body.links = {home: "/", _self: "/login", register: "/register"};
-            if (result.success) {
-                ctx.response.status = 200;
-                ctx.body.token = result.value.token;
-            } else {
-                ctx.response.status = 401;
-            }
-        })
+        //token: jwt.sign({ username: ctx.request.body.user }, SECRET, {expiresIn: '1d'})};
+        let result = await DatabaseManager.findUser({username: ctx.request.body.username, password: ctx.request.body.password});
+        ctx.response.status = 200
+        ctx.body.links = {home: "/", register: "/register", profile: "/profile", _self: "/login"};
+        (result.success !== undefined ? (ctx.body = result, ctx.response.status = 400) : ctx.body = {username: result.username, token: result.token }); 
     } catch (error) {
-        ctx.response.status = 401;
-        ctx.body = error;
+        ctx.body = "Internal server error";
+        ctx.response.status = 500;
+    }
+});
+
+router.get("/profile", async function (ctx) {
+    ctx.body = {};
+    try {
+        
+    } catch (error) {
+        ctx.body = "Internal server error";
+        ctx.response.status = 500;
     }
 });
 
@@ -72,12 +74,12 @@ router.get("/drop", async function (ctx) {
     const users = "apiusers";
 
     await DatabaseManager.dropCollection(users).then( (result) => {
+        console.log(result);
         ctx.redirect('/');
     })
     
 });
 
-//export default router;
 module.exports = {
     router
 }

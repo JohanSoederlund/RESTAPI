@@ -13,6 +13,8 @@ import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
 import withStyles from '@material-ui/core/styles/withStyles';
 
+import MaterialUIForm from 'react-material-ui-form'
+
 import api from '../Helpers/api'
 
 const styles = theme => ({
@@ -47,54 +49,73 @@ const styles = theme => ({
   },
 });
 
-let tmp = {};
+class SignIn extends React.Component  {
 
-async function submit() {
-  let res = await api.login({username: "johan", password:"123"});
-  console.log("submit");
-  console.log(res);
-  tmp = res;
-}
+  constructor(props) {
+    super(props);
+    this.state = {
+      username: "",
+      token: "",
+      signedInCallback: props.signedInCallback,
+      heading: props.heading,
+      register: props.register
+    }
+  }
 
-function SignIn(props) {
-  const { classes } = props;
+  async submit(values) {
+    if (this.state.register && values.confirmPassword !== values.password) return;
+    let res = await api.registerOrLogin({username: values.username, password:values.password, register: this.state.register});
+    this.setState({username: res.username, token: res.token});
+    this.state.signedInCallback({username: res.username, token: res.token});
+  }
 
-  return (
-    <main className={classes.main}>
-      <CssBaseline />
-      <Paper className={classes.paper}>
-        <Avatar className={classes.avatar}>
-          <LockOutlinedIcon />
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          Sign in
-        </Typography>
-        <form className={classes.form}>
-          <FormControl margin="normal" required fullWidth>
-            <InputLabel htmlFor="email">Username</InputLabel>
-            <Input id="email" name="email" autoComplete="email" autoFocus />
-          </FormControl>
-          <FormControl margin="normal" required fullWidth>
-            <InputLabel htmlFor="password">Password</InputLabel>
-            <Input name="password" type="password" id="password" autoComplete="current-password" />
-          </FormControl>
-          <FormControlLabel
-            control={<Checkbox value="remember" color="primary" />}
-            label="Remember me"
-          />
-          <Button onClick={() => submit()}
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            className={classes.submit}
-          >
-            Sign in
-          </Button>
-        </form>
-      </Paper>
-    </main>
-  );
+  render() {
+    const { classes } = this.props;
+    let secondPassword = null;
+    if (this.state.register) {
+      secondPassword = <FormControl margin="normal" required fullWidth>
+                          <InputLabel htmlFor="confirm password">Confirm password</InputLabel>
+                          <Input name="confirmPassword" type="password" id="confirmPassword" value="" />
+                        </FormControl>
+    }
+    return (
+      <main className={classes.main}>
+        <CssBaseline />
+        <Paper className={classes.paper}>
+          <Avatar className={classes.avatar}>
+            <LockOutlinedIcon />
+          </Avatar>
+          <Typography component="h1" variant="h5">
+            {this.props.heading}
+          </Typography>
+          <MaterialUIForm className={classes.form}  onSubmit={this.submit.bind(this)}>
+              <FormControl margin="normal" required fullWidth>
+                <InputLabel htmlFor="email">Username</InputLabel>
+                <Input id="username" name="username" autoComplete="email" value="" autoFocus />
+              </FormControl>
+              <FormControl margin="normal" required fullWidth>
+                <InputLabel htmlFor="password">Password</InputLabel>
+                <Input name="password" type="password" id="password" value=""  />
+              </FormControl>
+              {secondPassword}
+              <FormControlLabel
+                control={<Checkbox value="remember" color="primary" />}
+                label="Remember me"
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                color="primary"
+                className={classes.submit}
+              >
+                {this.props.heading}
+              </Button>
+          </MaterialUIForm>
+        </Paper>
+      </main>
+    );
+  }
 }
 
 SignIn.propTypes = {
