@@ -65,8 +65,14 @@ class SignIn extends React.Component  {
   async submit(values) {
     if (this.state.register && values.confirmPassword !== values.password) return;
     let res = await api.registerOrLogin({username: values.username, password:values.password, register: this.state.register});
-    this.setState({username: res.username, token: res.token});
-    this.state.signedInCallback({username: res.username, token: res.token});
+    console.log(res);
+    if (res.success) {
+      this.setState({username: res.username, token: res.token});
+      this.state.signedInCallback({username: res.username, token: res.token});
+    } else {
+      this.setState({message: res.value});
+    }
+    
   }
 
   render() {
@@ -112,6 +118,7 @@ class SignIn extends React.Component  {
                 {this.props.heading}
               </Button>
           </MaterialUIForm>
+          <p>{this.state.message}</p>
         </Paper>
       </main>
     );

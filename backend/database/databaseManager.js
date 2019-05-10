@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserModel = require('./userModel');
+const JournalModel = require('./journalModel');
 
 const connectionString = 'mongodb://localhost:27017';
    
@@ -30,7 +31,7 @@ function disconnectDatabase() {
 }
 
 
-function dropCollection(collection1, collection2) {
+function dropCollection(collection1) {
     return new Promise((resolve, reject) => {
         mongoose.connection.db.dropCollection( collection1 )
         .then( (response) => {
@@ -38,13 +39,7 @@ function dropCollection(collection1, collection2) {
         .catch((error) => {
             //reject("Could not drop collection: \n" + error, false);
         });
-        mongoose.connection.db.dropCollection( collection2 )
-        .then( (response) => {
-            resolve(response);
-        })
-        .catch((error) => {
-            reject("Could not drop collection: \n" + error, false);
-        });
+        
     });
 }
 
@@ -57,6 +52,9 @@ async function saveNewUser(user) {
             console.log("username taken");
             return {value: "username taken", success: false};
         }
+        let journal = new JournalModel({username: user.username, articles: ["Hello world!"]});
+        let jour = await journal.save();
+        console.log(jour);
         return await user.save();
         
     } catch (error) {
@@ -64,21 +62,42 @@ async function saveNewUser(user) {
     }
 }
 
-async function findUser(user) {
-
-    let databaseUser = await UserModel.findOne({username: user.username});
-    let same = await bcrypt.compare(user.password, databaseUser.password);
-    console.log(same);
-    if (same) return databaseUser;
-    else return {value: "wrong username or password", success: false};
-    
+async function findAndUpdateUser(user) {
+    let conditions = {username: user.username}
+    let databaseUser = await UserModel.findOne(conditions);
+    if(databaseUser === null || databaseUser === undefined) return {value: "user doesn't exist", success: false};
+    if (await bcrypt.compare(user.password, databaseUser.password)) {
+        let update = {$set:{token: user.token}};
+        let options = {new: true};
+        
+        let updatedUser = await UserModel.findOneAndUpdate(conditions, update, options)
+        return updatedUser;
+    }
+    return {value: "wrong username or password", success: false};
 }
 
+async function findJournal(user) {
+    let conditions = {username: user.username};
+    let journal = await JournalModel.findOne(conditions);
+    return journal;
+}
+
+async function insertToJournal(user) {
+    let conditions = {username: user.username};
+    let journal = await JournalModel.findOne(conditions);
+    let articles = journal.articles.push(user.article);
+    let update = {$set:{articles: articles}};
+    let options = {new: true};
+    let updatedJournal = await JournalModel.findOneAndUpdate(conditions, update, options)
+    return updatedJournal;
+}
 
 module.exports = {
     connectDatabase,
     disconnectDatabase,
     dropCollection,
     saveNewUser,
-    findUser
+    findAndUpdateUser,
+    findJournal,
+    insertToJournal
 }
