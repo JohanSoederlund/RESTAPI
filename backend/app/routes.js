@@ -22,15 +22,25 @@ router.get("/", async function (ctx) {
 });
 
 router.post("/register", async function (ctx) {
-    ctx.body = {};
     try {
-        let user = {username: ctx.request.body.username, password: ctx.request.body.password, 
-            token: jwt.sign({ username: ctx.request.body.username }, SECRET, {expiresIn: '1d'})};
-        let result = await DatabaseManager.saveNewUser(user);
-        ctx.body.links = {home: "/", login: "/login", journal: "/journal", _self: "/register"};
-        ctx.response.status = 201;
-        (result.success !== undefined ? (ctx.body = result, ctx.response.status = 400) : ctx.body = {username: result.username, token: result.token, success: true });
-        
+        if (typeof ctx.request.body.username !== "string" || typeof ctx.request.body.password !== "string") {
+            ctx.response.status = 400;
+            ctx.body = {value: "Incorrect username or password", success: false};
+        } else {
+            //using jwt token for sessions and authorization
+            let user = {username: ctx.request.body.username, password: ctx.request.body.password, 
+                token: jwt.sign({ username: ctx.request.body.username }, SECRET, {expiresIn: '1d'})};
+            let result = await DatabaseManager.saveNewUser(user);
+            ctx.response.status = 201;
+            (result.success !== undefined 
+                ? (ctx.body = result, ctx.response.status = 400) 
+                : ctx.body = {
+                    links: {home: "/", login: "/login", journal: "/journal", _self: "/register"},
+                    username: result.username, 
+                    token: result.token, 
+                    success: true
+                });
+        }
     } catch (error) {
         ctx.body = {value: "Internal server error", success: false};
         ctx.response.status = 500;
@@ -38,7 +48,7 @@ router.post("/register", async function (ctx) {
 });
 
 /**
- * Todo
+ * Todo implement delete user
  */
 router.delete("/register", async function (ctx) {
     
@@ -47,12 +57,26 @@ router.delete("/register", async function (ctx) {
 router.post("/login", async function (ctx) {
     ctx.body = {};
     try {
-        let user = {username: ctx.request.body.username, password: ctx.request.body.password, 
-            token: jwt.sign({ username: ctx.request.body.username }, SECRET, {expiresIn: '1d'})};
-        let result = await DatabaseManager.findAndUpdateUser(user);
-        ctx.response.status = 200;
-        ctx.body.links = {home: "/", register: "/register", _self: "/login", journal: "/journal"};
-        (result.success !== undefined ? (ctx.body = result, ctx.response.status = 400) : ctx.body = {username: result.username, token: result.token, success: true}); 
+        let username = ctx.request.body.username, password = ctx.request.body.password;
+        if (typeof username !== "string" || typeof password !== "string") {
+            ctx.response.status = 400;
+            ctx.body = {value: "Incorrect username or password", success: false};
+        } else {
+            //using jwt token for sessions and authorization
+            let user = {username: username, password: password, 
+                token: jwt.sign({ username: username }, SECRET, {expiresIn: '1d'})};
+            let result = await DatabaseManager.findAndUpdateUser(user);
+            ctx.response.status = 200;
+
+            (result.success !== undefined 
+                ? (ctx.body = result, ctx.response.status = 400) 
+                : ctx.body = {
+                    links: {home: "/", register: "/register", journal: "/journal", _self: "/login"},
+                    username: result.username, 
+                    token: result.token, 
+                    success: true
+                }); 
+            }
     } catch (error) {
         ctx.body = "Internal server error";
         ctx.response.status = 500;
@@ -62,17 +86,26 @@ router.post("/login", async function (ctx) {
 router.get("/journal", async function (ctx) {
     ctx.body = {};
     try {
-        let decoded = await jwt.verify(ctx.header.authorization, SECRET);
-        let journal;
         ctx.response.status = 401;
-        if (decoded.exp < Math.floor((new Date).getTime()/1000)) ctx.body = {value: "Invalid session", success: false};
-        else {
-            journal = await DatabaseManager.findJournal({username: decoded.username});
-            ctx.response.status = 200;
-            journal.success = true;
-            ctx.body = journal;
+        if (ctx.header.authorization === undefined) {
+            ctx.body = {value: "Invalid session", success: false};
+        } else {
+            let decoded = await jwt.verify(ctx.header.authorization, SECRET);
+
+            //check that jwt is still valid
+            if (decoded.exp < Math.floor((new Date).getTime()/1000)) {
+                ctx.body = {value: "Invalid session", success: false};
+            } else {
+                let journal = await DatabaseManager.findJournal({username: decoded.username});
+                ctx.response.status = 200;
+                ctx.body = {
+                    links: {home: "/", register: "/register", login: "/login", _self: "/journal"},
+                    username: journal.username, 
+                    articles: journal.articles,
+                    success: true
+                }
+            }
         }
-        
     } catch (error) {
         ctx.body = {value: "Internal server error", success: false};
         ctx.response.status = 500;
@@ -82,20 +115,37 @@ router.get("/journal", async function (ctx) {
 router.post("/journal", async function (ctx) {
     ctx.body = {};
     try {
-        let decoded = await jwt.verify(ctx.header.authorization, SECRET);
-        let user = {username: decoded.username, article: ctx.request.body.article}
         ctx.response.status = 401;
-        if (decoded.exp < Math.floor((new Date).getTime()/1000)) ctx.body = {value: "Invalid session", success: false};
-        else {
-            let journal = await DatabaseManager.insertToJournal(user);
-            ctx.response.status = 201;
-            journal.success = true;
-            ctx.body = journal;
+        if (ctx.header.authorization === undefined) {
+            ctx.body = {value: "Invalid session", success: false};
+        } else {
+            let decoded = await jwt.verify(ctx.header.authorization, SECRET);
+            let user = {username: decoded.username, article: ctx.request.body.article}
+
+            if (decoded.exp < Math.floor((new Date).getTime()/1000)) {
+                ctx.body = {value: "Invalid session", success: false};
+            } else {
+                let journal = await DatabaseManager.insertToJournal(user);
+                ctx.response.status = 201;
+                ctx.body = {
+                    links: {home: "/", register: "/register", login: "/login", _self: "/journal"},
+                    username: journal.username, 
+                    articles: journal.articles,
+                    success: true
+                }
+            }
         }
     } catch (error) {
         ctx.body = {value: "Internal server error", success: false};    
         ctx.response.status = 500;
     }
+});
+
+/**
+ * Todo implement delete journal
+ */
+router.delete("/journal", async function (ctx) {
+    
 });
 
 /**
