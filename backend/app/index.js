@@ -20,10 +20,6 @@ app.use(BodyParser());
 app.use(logger());
 app.use(helmet());
 
-const options = {
-  //get post patch delete ...
-};
-
 DatabaseManager.connectDatabase();
 
 // Custom 401 handling
@@ -46,6 +42,6 @@ app.use(async (ctx, next) => {
     await next();
 })
 
-app.use(router.router.routes()).use(router.router.allowedMethods(options));
+app.use(router.router.routes()).use(router.router.allowedMethods());
 
 app.listen(process.env.PORT || 3001);

@@ -30,17 +30,10 @@ function disconnectDatabase() {
     })
 }
 
-
-function dropCollection(collection1) {
-    return new Promise((resolve, reject) => {
-        mongoose.connection.db.dropCollection( collection1 )
-        .then( (response) => {
-        })
-        .catch((error) => {
-            //reject("Could not drop collection: \n" + error, false);
-        });
-        
-    });
+async function dropCollection(collection1, collection2) {
+    let result1 = await mongoose.connection.db.dropCollection( collection1 );
+    let result2 = await mongoose.connection.db.dropCollection( collection2 );
+    return [result1, result2];
 }
 
 async function saveNewUser(user) {
@@ -49,16 +42,15 @@ async function saveNewUser(user) {
         let salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
         if (await UserModel.findOne({username: user.username})) {
-            console.log("username taken");
             return {value: "username taken", success: false};
         }
-        let journal = new JournalModel({username: user.username, articles: ["Hello world!"]});
-        let jour = await journal.save();
-        console.log(jour);
+        let journal = new JournalModel({username: user.username, articles: [{article: "Hello world!", date: formatedDate()}]});
+        await journal.save();
         return await user.save();
         
     } catch (error) {
         console.log(error);
+        return {value: "Internal server error", success: false};
     }
 }
 
@@ -85,12 +77,28 @@ async function findJournal(user) {
 async function insertToJournal(user) {
     let conditions = {username: user.username};
     let journal = await JournalModel.findOne(conditions);
-    let articles = journal.articles.push(user.article);
+    let articles = journal.articles;
+    articles.push(user.article);
     let update = {$set:{articles: articles}};
     let options = {new: true};
     let updatedJournal = await JournalModel.findOneAndUpdate(conditions, update, options)
     return updatedJournal;
 }
+
+function formatedDate() {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; //January is 0!
+
+    var yyyy = today.getFullYear();
+    if (dd < 10) {
+      dd = '0' + dd;
+    } 
+    if (mm < 10) {
+      mm = '0' + mm;
+    } 
+    return dd + '/' + mm + '/' + yyyy;
+  }
 
 module.exports = {
     connectDatabase,

@@ -6,12 +6,11 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import { withStyles } from '@material-ui/core/styles';
-
 import { BrowserRouter as Router, Route, Link, Redirect } from "react-router-dom";
 
-import Home from './Home'
-import Profile from './Profile'
-import SignIn from './SignIn'
+import Journal from './Journal';
+import SignIn from './SignIn';
+import Cookie from '../Helpers/cookie';
 
 
 const styles = theme => ({
@@ -32,8 +31,17 @@ class Navigation extends React.Component  {
   
   constructor(props) {
     super(props);
+    let cookie = new Cookie();
+    let token = cookie.getCookie();
+    let signin = "Sign In";
+    if (token !== undefined) {
+      signin = "Sign Out"
+    }
     this.state = {
-      redirect: false
+      token: token,
+      cookie: cookie,
+      redirect: false,
+      signin: signin
     }
   }
   
@@ -46,62 +54,67 @@ class Navigation extends React.Component  {
     }
   }
 
-  signedInCallback(user) {
-    console.log(user);
+  async signedInCallback(user) {
+    await this.state.cookie.setCookie(user.token);
+
     this.setState({
       redirect: true,
       username: user.username,
-      token: user.token
+      token: user.token,
+      signin: "Sign Out"
     })
+  }
+
+  async manageSignOut() {
+    if (this.state.signin === "Sign Out") {
+      await this.state.cookie.removeCookie();
+      this.setState({
+        token: "",
+        signin: "Sign In"
+      })
+    }
   }
 
   render() {
     const { classes } = this.props;
   return (
     <Router>  
-    {this.renderRedirect("/profile")}
-    <React.Fragment>
-      <CssBaseline />
-      <AppBar position="static" color="default" className={classes.appBar}>
-        <Toolbar>
-          <Typography variant="h6" color="inherit" noWrap className={classes.toolbarTitle}>
-            REST API
-          </Typography>
-          
-          <Button>
-            <Link to="/home">Home</Link>
-          </Button>
-          <Button>
-            <Link to="/profile">Profile</Link>
-          </Button>
-          <Button>
-            <Link to="/register">Register</Link>
-          </Button>
-          <Button variant="outlined">
-            <Link to="/login">Sign in</Link>
-          </Button>
-          
-        </Toolbar>
-      </AppBar>
-    </React.Fragment>
+      {this.renderRedirect("/journal")}
+      <React.Fragment>
+        <CssBaseline />
+        <AppBar position="static" color="default" className={classes.appBar}>
+          <Toolbar>
+            <Typography variant="h6" color="inherit" noWrap className={classes.toolbarTitle}>
+              REST API
+            </Typography>
+            <Button>
+              <Link to="/journal">Journal</Link>
+            </Button>
+            <Button>
+              <Link to="/register">Register</Link>
+            </Button>
+            <Button variant="outlined" >
+              <Link onClick={this.manageSignOut.bind(this)} to="/login">{this.state.signin}</Link>
+            </Button>
+          </Toolbar>
+        </AppBar>
+      </React.Fragment>
 
-    <Route path="/login" 
-      render={(props) => <SignIn {...props} signedInCallback={this.signedInCallback.bind(this)} heading={"Sign In"} register={false} />}
-    />
+      <Route path="/login" 
+        render={(props) => <SignIn {...props} signedInCallback={this.signedInCallback.bind(this)} heading={"Sign In"} register={false} />}
+      />
 
-    <Route path="/register" 
-      render={(props) => <SignIn {...props} signedInCallback={this.signedInCallback.bind(this)} heading={"Register"} register={true} />}
-    />
+      <Route path="/register" 
+        render={(props) => <SignIn {...props} signedInCallback={this.signedInCallback.bind(this)} heading={"Register"} register={true} />}
+      />
 
-    <Route path="/profile" 
-      render={(props) => <Profile {...props} username={this.state.username} token={this.state.token} />}
-    />
+      <Route path="/journal" 
+        render={(props) => <Journal {...props} username={this.state.username} token={this.state.token} />}
+      />
 
-    <Route path="/home" component={Home} />
-
-</Router>
-  );
-}}
+    </Router>
+    );
+  }}
 
 Navigation.propTypes = {
   classes: PropTypes.object.isRequired,

@@ -12,15 +12,14 @@ import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
 import withStyles from '@material-ui/core/styles/withStyles';
-
 import MaterialUIForm from 'react-material-ui-form'
 
-import api from '../Helpers/api'
+import api from '../Helpers/api';
 
 const styles = theme => ({
   main: {
     width: 'auto',
-    display: 'block', // Fix IE 11 issue.
+    display: 'block',
     marginLeft: theme.spacing.unit * 3,
     marginRight: theme.spacing.unit * 3,
     [theme.breakpoints.up(400 + theme.spacing.unit * 3 * 2)]: {
@@ -41,7 +40,7 @@ const styles = theme => ({
     backgroundColor: theme.palette.secondary.main,
   },
   form: {
-    width: '100%', // Fix IE 11 issue.
+    width: '100%',
     marginTop: theme.spacing.unit,
   },
   submit: {
@@ -49,30 +48,31 @@ const styles = theme => ({
   },
 });
 
+/**
+ * SignIn is also reused for register
+ */
 class SignIn extends React.Component  {
 
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      token: "",
       signedInCallback: props.signedInCallback,
       heading: props.heading,
       register: props.register
     }
   }
 
+  /**
+   * Sign in or register submit.
+   * @values Object {username, password, confirmPassword}
+   */
   async submit(values) {
+    //cancel submit if password missmatch and this is register component
     if (this.state.register && values.confirmPassword !== values.password) return;
+    //Fetch POST to API (register or login)
     let res = await api.registerOrLogin({username: values.username, password:values.password, register: this.state.register});
-    console.log(res);
-    if (res.success) {
-      this.setState({username: res.username, token: res.token});
-      this.state.signedInCallback({username: res.username, token: res.token});
-    } else {
-      this.setState({message: res.value});
-    }
-    
+    //If login or register was successful den use callback from Navigation component
+    (res.success) ? await this.state.signedInCallback({username: res.username, token: res.token}) : this.setState({message: res.value});
   }
 
   render() {
