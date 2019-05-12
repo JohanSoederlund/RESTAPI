@@ -4,6 +4,7 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import withStyles from '@material-ui/core/styles/withStyles';
 import MaterialUIForm from 'react-material-ui-form'
+import Typography from '@material-ui/core/Typography';
 
 import api from '../Helpers/api';
 import Article from './Article';
@@ -18,13 +19,13 @@ const styles = theme => ({
       width: '60%',
       marginLeft: 'auto',
       marginRight: 'auto',
+      
     },
   },
-  root: {
-    ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit * 2,
-    paddingBottom: theme.spacing.unit * 2,
-  },
+  heading: {
+    marginBottom: '4%',
+    marginTop: '4%'
+  }
 });
 
 class Journal extends React.Component  {
@@ -47,6 +48,9 @@ class Journal extends React.Component  {
     }
   }
   
+  /**
+   * Post newly created article to API
+   */
   async submit() {
     //cancel submit if not logged in or no article is written
     if (this.state.multiline === undefined || this.props.token === "") return;
@@ -86,7 +90,9 @@ class Journal extends React.Component  {
 
     return (
       <main className={classes.main}>
-        <h1>{this.state.username}'s journal </h1>
+        <Typography className={classes.heading} variant="h4" component="h4">
+          {this.state.username}'s journal 
+        </Typography>
         
         {this.articles}
 

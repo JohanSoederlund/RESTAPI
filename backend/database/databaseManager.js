@@ -39,11 +39,16 @@ async function dropCollection(collection1, collection2) {
 async function saveNewUser(user) {
     try {
         user = new UserModel(user);
+
+        //salt to strengthen hash
         let salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
+
         if (await UserModel.findOne({username: user.username})) {
             return {value: "username taken", success: false};
         }
+
+        //Saving new user with hashed pw and new journal with same username
         let journal = new JournalModel({username: user.username, articles: [{article: "Hello world!", date: formatedDate()}]});
         await journal.save();
         return await user.save();
@@ -58,12 +63,13 @@ async function findAndUpdateUser(user) {
     let conditions = {username: user.username}
     let databaseUser = await UserModel.findOne(conditions);
     if(databaseUser === null || databaseUser === undefined) return {value: "user doesn't exist", success: false};
+
+    //Compares hashed password in database with client sent password 
     if (await bcrypt.compare(user.password, databaseUser.password)) {
         let update = {$set:{token: user.token}};
         let options = {new: true};
         
-        let updatedUser = await UserModel.findOneAndUpdate(conditions, update, options)
-        return updatedUser;
+        return await UserModel.findOneAndUpdate(conditions, update, options)
     }
     return {value: "wrong username or password", success: false};
 }
@@ -75,14 +81,14 @@ async function findJournal(user) {
 }
 
 async function insertToJournal(user) {
-    let conditions = {username: user.username};
-    let journal = await JournalModel.findOne(conditions);
+    let serchcontions = {username: user.username};
+    let journal = await JournalModel.findOne(serchcontions);
     let articles = journal.articles;
     articles.push(user.article);
     let update = {$set:{articles: articles}};
     let options = {new: true};
-    let updatedJournal = await JournalModel.findOneAndUpdate(conditions, update, options)
-    return updatedJournal;
+    //return updated journal
+    return await JournalModel.findOneAndUpdate(serchcontions, update, options)
 }
 
 function formatedDate() {

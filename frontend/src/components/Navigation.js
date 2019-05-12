@@ -45,6 +45,9 @@ class Navigation extends React.Component  {
     }
   }
   
+  /**
+   * Redirect to url (atm used to redirect to journal when signed in)
+   */
   renderRedirect = (url) => {
     if (this.state.redirect) {
       this.setState({
@@ -54,6 +57,9 @@ class Navigation extends React.Component  {
     }
   }
 
+  /**
+   * Used by SignIn component as a callback for when a user is successfully signed in.
+   */
   async signedInCallback(user) {
     await this.state.cookie.setCookie(user.token);
 
@@ -65,6 +71,9 @@ class Navigation extends React.Component  {
     })
   }
 
+  /**
+   * Change button text and removes jwt
+   */
   async manageSignOut() {
     if (this.state.signin === "Sign Out") {
       await this.state.cookie.removeCookie();

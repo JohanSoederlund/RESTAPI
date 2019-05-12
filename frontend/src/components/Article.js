@@ -20,6 +20,9 @@ const styles = theme => ({
   }
 });
 
+/**
+ * One article/post
+ */
 class Article extends React.Component  {
 
   render() {

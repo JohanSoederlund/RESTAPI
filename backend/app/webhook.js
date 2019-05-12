@@ -2,6 +2,9 @@
 
 const axios = require('axios');
 
+/**
+ * Publish/subsribe functionality for future use
+ */
 function postToCallback(user, data) {
     axios.post(user.webhookCallback, data)
     .then((res) => {

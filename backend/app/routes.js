@@ -30,8 +30,10 @@ router.post("/register", async function (ctx) {
             //using jwt token for sessions and authorization
             let user = {username: ctx.request.body.username, password: ctx.request.body.password, 
                 token: jwt.sign({ username: ctx.request.body.username }, SECRET, {expiresIn: '1d'})};
+
             let result = await DatabaseManager.saveNewUser(user);
             ctx.response.status = 201;
+
             (result.success !== undefined 
                 ? (ctx.body = result, ctx.response.status = 400) 
                 : ctx.body = {
@@ -65,6 +67,7 @@ router.post("/login", async function (ctx) {
             //using jwt token for sessions and authorization
             let user = {username: username, password: password, 
                 token: jwt.sign({ username: username }, SECRET, {expiresIn: '1d'})};
+
             let result = await DatabaseManager.findAndUpdateUser(user);
             ctx.response.status = 200;
 
@@ -98,6 +101,7 @@ router.get("/journal", async function (ctx) {
             } else {
                 let journal = await DatabaseManager.findJournal({username: decoded.username});
                 ctx.response.status = 200;
+
                 ctx.body = {
                     links: {home: "/", register: "/register", login: "/login", _self: "/journal"},
                     username: journal.username, 
@@ -119,14 +123,19 @@ router.post("/journal", async function (ctx) {
         if (ctx.header.authorization === undefined) {
             ctx.body = {value: "Invalid session", success: false};
         } else {
+            //verifying jwt
             let decoded = await jwt.verify(ctx.header.authorization, SECRET);
             let user = {username: decoded.username, article: ctx.request.body.article}
 
+            //check that jwt is still valid
             if (decoded.exp < Math.floor((new Date).getTime()/1000)) {
                 ctx.body = {value: "Invalid session", success: false};
             } else {
+
+                //Add article to journal
                 let journal = await DatabaseManager.insertToJournal(user);
                 ctx.response.status = 201;
+
                 ctx.body = {
                     links: {home: "/", register: "/register", login: "/login", _self: "/journal"},
                     username: journal.username, 
